@@ -26,112 +26,7 @@ let approvalRequests: ApprovalRequest[] = []
 let otps: OTP[] = []
 let notifications: Notification[] = []
 
-// Initialize with demo data
-const initializeDemoData = (userId: string) => {
-  const today = new Date()
-  const thisMonth = today.toISOString().slice(0, 7)
-  
-  // Add demo income
-  incomes.push({
-    id: generateId(),
-    userId,
-    amount: 12500,
-    date: `${thisMonth}-01`,
-  })
-  
-  // Add default allocations
-  const defaultAllocations: { category: BudgetCategory; percentage: number }[] = [
-    { category: 'expenses', percentage: 40 },
-    { category: 'savings', percentage: 20 },
-    { category: 'education', percentage: 15 },
-    { category: 'personal', percentage: 15 },
-    { category: 'emergency', percentage: 10 },
-  ]
-  
-  defaultAllocations.forEach(({ category, percentage }) => {
-    allocations.push({
-      id: generateId(),
-      userId,
-      category,
-      percentage,
-    })
-  })
-  
-  // Add demo expenses
-  expenses.push(
-    {
-      id: generateId(),
-      userId,
-      title: 'Groceries',
-      amount: 850,
-      category: 'expenses',
-      date: `${thisMonth}-05`,
-    },
-    {
-      id: generateId(),
-      userId,
-      title: 'Electricity Bill',
-      amount: 320,
-      category: 'expenses',
-      date: `${thisMonth}-10`,
-    },
-    {
-      id: generateId(),
-      userId,
-      title: 'Online Course',
-      amount: 500,
-      category: 'education',
-      date: `${thisMonth}-08`,
-    }
-  )
-  
-  // Add demo saved payments
-  savedPayments.push(
-    {
-      id: generateId(),
-      userId,
-      name: 'University Tuition',
-      accountNumber: 'EDU-2024-001',
-      category: 'education',
-      defaultAmount: 1500,
-      dueDate: `${thisMonth}-25`,
-      autoPay: false,
-    },
-    {
-      id: generateId(),
-      userId,
-      name: 'Monthly Rent',
-      accountNumber: 'RENT-APT-42',
-      category: 'expenses',
-      defaultAmount: 2000,
-      dueDate: `${thisMonth}-01`,
-      autoPay: true,
-      frequency: 'monthly',
-    }
-  )
-  
-  // Add demo notifications
-  notifications.push(
-    {
-      id: generateId(),
-      userId,
-      title: 'Payment Due Soon',
-      message: 'University Tuition payment is due in 2 days',
-      type: 'reminder',
-      read: false,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: generateId(),
-      userId,
-      title: 'Budget Alert',
-      message: 'You have used 75% of your Expenses budget',
-      type: 'alert',
-      read: false,
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    }
-  )
-}
+// No demo data initialization - users start with zero state
 
 // Simulated API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -146,7 +41,6 @@ export const userApi = {
       createdAt: new Date().toISOString(),
     }
     users.push(user)
-    initializeDemoData(user.id)
     return user
   },
   
@@ -235,6 +129,25 @@ export const incomeApi = {
     return undefined
   },
   
+  // Set or replace monthly income (replaces all income for the month)
+  async setMonthlyIncome(userId: string, amount: number): Promise<Income> {
+    await delay(300)
+    const thisMonth = new Date().toISOString().slice(0, 7)
+    
+    // Remove existing income for this month
+    incomes = incomes.filter(i => !(i.userId === userId && i.date.startsWith(thisMonth)))
+    
+    // Add new income
+    const income: Income = {
+      id: generateId(),
+      userId,
+      amount,
+      date: `${thisMonth}-01`,
+    }
+    incomes.push(income)
+    return income
+  },
+  
   async getCurrentMonth(userId: string): Promise<number> {
     await delay(100)
     const thisMonth = new Date().toISOString().slice(0, 7)
@@ -243,6 +156,11 @@ export const incomeApi = {
       .reduce((sum, i) => sum + i.amount, 0)
     return monthlyIncome
   },
+  
+  async hasIncome(userId: string): Promise<boolean> {
+    await delay(50)
+    return incomes.some(i => i.userId === userId)
+  },
 }
 
 // ============= ALLOCATION API =============
@@ -250,6 +168,30 @@ export const allocationApi = {
   async get(userId: string): Promise<Allocation[]> {
     await delay(200)
     return allocations.filter(a => a.userId === userId)
+  },
+  
+  async add(data: Omit<Allocation, 'id'>): Promise<Allocation> {
+    await delay(200)
+    // Check if category already exists for user
+    const existing = allocations.find(a => a.userId === data.userId && a.category === data.category)
+    if (existing) {
+      existing.percentage = data.percentage
+      return existing
+    }
+    
+    const allocation: Allocation = {
+      ...data,
+      id: generateId(),
+    }
+    allocations.push(allocation)
+    return allocation
+  },
+  
+  async remove(userId: string, category: BudgetCategory): Promise<boolean> {
+    await delay(200)
+    const initialLength = allocations.length
+    allocations = allocations.filter(a => !(a.userId === userId && a.category === category))
+    return allocations.length < initialLength
   },
   
   async update(id: string, percentage: number): Promise<Allocation | undefined> {
@@ -271,6 +213,27 @@ export const allocationApi = {
       }
     })
     return allocations.filter(a => a.userId === userId)
+  },
+  
+  async setAll(userId: string, allocs: { category: BudgetCategory; percentage: number }[]): Promise<Allocation[]> {
+    await delay(300)
+    // Remove all existing allocations for user
+    allocations = allocations.filter(a => a.userId !== userId)
+    
+    // Add new allocations
+    const newAllocations = allocs.map(alloc => ({
+      id: generateId(),
+      userId,
+      category: alloc.category,
+      percentage: alloc.percentage,
+    }))
+    allocations.push(...newAllocations)
+    return newAllocations
+  },
+  
+  async hasAllocations(userId: string): Promise<boolean> {
+    await delay(50)
+    return allocations.some(a => a.userId === userId)
   },
 }
 

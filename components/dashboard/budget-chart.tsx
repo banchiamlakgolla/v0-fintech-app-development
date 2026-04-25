@@ -21,7 +21,7 @@ function formatCurrency(amount: number) {
 }
 
 export function BudgetChart() {
-  const { budgetSummary, income } = useFinance()
+  const { budgetSummary, income, hasAllocations } = useFinance()
 
   const chartData = budgetSummary.map((item, index) => ({
     name: item.label,
@@ -59,7 +59,7 @@ export function BudgetChart() {
         <CardTitle className="text-lg">Budget Distribution</CardTitle>
       </CardHeader>
       <CardContent>
-        {income > 0 ? (
+        {income > 0 && hasAllocations && chartData.length > 0 ? (
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -78,7 +78,7 @@ export function BudgetChart() {
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
-                  formatter={(value, entry: any) => (
+                  formatter={(value) => (
                     <span className="text-sm text-foreground">{value}</span>
                   )}
                 />
@@ -86,8 +86,8 @@ export function BudgetChart() {
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-            Add income to see budget distribution
+          <div className="h-[300px] flex items-center justify-center text-center text-muted-foreground px-4">
+            {!income ? 'Set your income to see budget distribution' : 'Set up budget allocations to see distribution'}
           </div>
         )}
       </CardContent>

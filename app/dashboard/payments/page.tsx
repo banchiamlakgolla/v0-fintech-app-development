@@ -28,7 +28,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { useFinance } from '@/context/finance-context'
 import { useAuth } from '@/context/auth-context'
 import { userApi } from '@/lib/api'
-import { BUDGET_CATEGORIES, type BudgetCategory, type SavedPayment } from '@/lib/types'
+import { SUGGESTED_CATEGORIES, type BudgetCategory, type SavedPayment } from '@/lib/types'
 import { 
   Plus, 
   CreditCard, 
@@ -59,6 +59,8 @@ export default function PaymentsPage() {
     savedPayments, 
     budgetSummary, 
     approvalRequests,
+    allocations,
+    hasAllocations,
     addSavedPayment, 
     updateSavedPayment, 
     deleteSavedPayment,
@@ -290,11 +292,14 @@ export default function PaymentsPage() {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {BUDGET_CATEGORIES.map((cat) => (
-                          <SelectItem key={cat.key} value={cat.key}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
+                        {allocations.map((alloc) => {
+                          const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === alloc.category)
+                          return (
+                            <SelectItem key={alloc.category} value={alloc.category}>
+                              {categoryInfo?.label || alloc.category}
+                            </SelectItem>
+                          )
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -375,7 +380,7 @@ export default function PaymentsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {savedPayments.map((payment) => {
-                  const categoryInfo = BUDGET_CATEGORIES.find(c => c.key === payment.category)
+                  const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === payment.category)
                   
                   return (
                     <div
@@ -467,7 +472,7 @@ export default function PaymentsPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Category</span>
                     <span className="font-medium text-foreground capitalize">
-                      {BUDGET_CATEGORIES.find(c => c.key === selectedPayment.category)?.label}
+                      {SUGGESTED_CATEGORIES.find(c => c.key === selectedPayment.category)?.label}
                     </span>
                   </div>
                   <div className="flex justify-between">

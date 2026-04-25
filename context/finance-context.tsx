@@ -12,7 +12,7 @@ import type {
   BudgetSummary,
   BudgetCategory,
 } from '@/lib/types'
-import { BUDGET_CATEGORIES } from '@/lib/types'
+import { SUGGESTED_CATEGORIES } from '@/lib/types'
 import {
   incomeApi,
   allocationApi,
@@ -38,9 +38,18 @@ interface FinanceContextType {
   // Loading states
   isLoading: boolean
   
+  // State checks
+  hasData: boolean
+  hasIncome: boolean
+  hasAllocations: boolean
+  
   // Actions
   refreshData: () => Promise<void>
+  setIncome: (amount: number) => Promise<void>
   addIncome: (amount: number) => Promise<void>
+  setAllocations: (allocs: { category: BudgetCategory; percentage: number }[]) => Promise<void>
+  addAllocation: (category: BudgetCategory, percentage: number) => Promise<void>
+  removeAllocation: (category: BudgetCategory) => Promise<void>
   updateAllocations: (updates: { category: BudgetCategory; percentage: number }[]) => Promise<void>
   addExpense: (data: Omit<Expense, 'id' | 'userId'>) => Promise<void>
   addSavedPayment: (data: Omit<SavedPayment, 'id' | 'userId'>) => Promise<void>
@@ -57,7 +66,7 @@ const FinanceContext = createContext<FinanceContextType | undefined>(undefined)
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   
-  const [income, setIncome] = useState(0)
+  const [income, setIncomeState] = useState(0)
   const [allocations, setAllocations] = useState<Allocation[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [savedPayments, setSavedPayments] = useState<SavedPayment[]>([])
@@ -89,7 +98,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         notificationApi.get(user.id),
       ])
       
-      setIncome(incomeData)
+      setIncomeState(incomeData)
       setAllocations(allocationsData)
       setExpenses(expensesData)
       setSavedPayments(paymentsData)
@@ -103,34 +112,63 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }, [user])
 
-  // Calculate budget summary
-  const budgetSummary: BudgetSummary[] = BUDGET_CATEGORIES.map(cat => {
-    const allocation = allocations.find(a => a.category === cat.key)
-    const percentage = allocation?.percentage ?? cat.defaultPercentage
-    const allocated = (income * percentage) / 100
+  // Compute state checks
+  const hasIncome = income > 0
+  const hasAllocations = allocations.length > 0
+  const hasData = hasIncome && hasAllocations
+
+  // Calculate budget summary - only for allocated categories
+  const budgetSummary: BudgetSummary[] = allocations.map(alloc => {
+    const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === alloc.category)
+    const allocated = (income * alloc.percentage) / 100
     const thisMonth = new Date().toISOString().slice(0, 7)
     const spent = expenses
-      .filter(e => e.category === cat.key && e.date.startsWith(thisMonth))
+      .filter(e => e.category === alloc.category && e.date.startsWith(thisMonth))
       .reduce((sum, e) => sum + e.amount, 0)
     
     return {
-      category: cat.key,
-      label: cat.label,
-      percentage,
+      category: alloc.category,
+      label: categoryInfo?.label || alloc.category,
+      percentage: alloc.percentage,
       allocated,
       spent,
       remaining: allocated - spent,
-      color: cat.color,
+      color: categoryInfo?.color || 'var(--chart-1)',
     }
   })
 
+  // Set income (replaces existing)
+  const setIncome = async (amount: number) => {
+    if (!user) return
+    await incomeApi.setMonthlyIncome(user.id, amount)
+    await refreshData()
+  }
+
+  // Add income (legacy - still adds)
   const addIncome = async (amount: number) => {
     if (!user) return
-    await incomeApi.add({
-      userId: user.id,
-      amount,
-      date: new Date().toISOString().slice(0, 10),
-    })
+    await incomeApi.setMonthlyIncome(user.id, amount)
+    await refreshData()
+  }
+
+  // Set all allocations at once (for onboarding)
+  const setAllocationsAll = async (allocs: { category: BudgetCategory; percentage: number }[]) => {
+    if (!user) return
+    await allocationApi.setAll(user.id, allocs)
+    await refreshData()
+  }
+
+  // Add a single allocation
+  const addAllocation = async (category: BudgetCategory, percentage: number) => {
+    if (!user) return
+    await allocationApi.add({ userId: user.id, category, percentage })
+    await refreshData()
+  }
+
+  // Remove an allocation
+  const removeAllocation = async (category: BudgetCategory) => {
+    if (!user) return
+    await allocationApi.remove(user.id, category)
     await refreshData()
   }
 
@@ -236,8 +274,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       notifications,
       budgetSummary,
       isLoading,
+      hasData,
+      hasIncome,
+      hasAllocations,
       refreshData,
+      setIncome,
       addIncome,
+      setAllocations: setAllocationsAll,
+      addAllocation,
+      removeAllocation,
       updateAllocations,
       addExpense,
       addSavedPayment,
