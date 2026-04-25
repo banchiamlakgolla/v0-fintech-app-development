@@ -31,13 +31,20 @@ export type BudgetCategory =
   | 'personal'
   | 'emergency'
 
-export const BUDGET_CATEGORIES: { key: BudgetCategory; label: string; defaultPercentage: number; color: string }[] = [
-  { key: 'expenses', label: 'Expenses', defaultPercentage: 40, color: 'var(--chart-1)' },
-  { key: 'savings', label: 'Savings', defaultPercentage: 20, color: 'var(--chart-2)' },
-  { key: 'education', label: 'Education', defaultPercentage: 15, color: 'var(--chart-3)' },
-  { key: 'personal', label: 'Personal', defaultPercentage: 15, color: 'var(--chart-4)' },
-  { key: 'emergency', label: 'Emergency', defaultPercentage: 10, color: 'var(--chart-5)' },
+// Suggested categories (user can choose which ones to use)
+export const SUGGESTED_CATEGORIES: { key: BudgetCategory; label: string; color: string }[] = [
+  { key: 'expenses', label: 'Expenses', color: 'var(--chart-1)' },
+  { key: 'savings', label: 'Savings', color: 'var(--chart-2)' },
+  { key: 'education', label: 'Education', color: 'var(--chart-3)' },
+  { key: 'personal', label: 'Personal', color: 'var(--chart-4)' },
+  { key: 'emergency', label: 'Emergency', color: 'var(--chart-5)' },
 ]
+
+// For backward compatibility, keep BUDGET_CATEGORIES but without default percentages
+export const BUDGET_CATEGORIES = SUGGESTED_CATEGORIES.map(cat => ({
+  ...cat,
+  defaultPercentage: 0, // No defaults - user must set
+}))
 
 // Expense types
 export interface Expense {

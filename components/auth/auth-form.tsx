@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,7 +22,8 @@ interface FormData {
 }
 
 export function AuthForm() {
-  const { login } = useAuth()
+  const router = useRouter()
+  const { login, onboardingComplete } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [step, setStep] = useState<AuthStep>('credentials')
   const [formData, setFormData] = useState<FormData>({
@@ -72,6 +74,8 @@ export function AuthForm() {
       if (result.success) {
         if (isLogin && result.user) {
           login(result.user)
+          // Existing users go to dashboard, new users will be redirected by dashboard
+          router.push('/dashboard')
         } else {
           setStep('pin')
         }
@@ -99,6 +103,8 @@ export function AuthForm() {
         pin: formData.pin,
       })
       login(user)
+      // New users go to onboarding
+      router.push('/onboarding')
     } catch (err) {
       setError('Registration failed. Please try again.')
     } finally {

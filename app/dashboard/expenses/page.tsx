@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useFinance } from '@/context/finance-context'
-import { BUDGET_CATEGORIES, type BudgetCategory } from '@/lib/types'
+import { SUGGESTED_CATEGORIES, type BudgetCategory } from '@/lib/types'
 import { Plus, Receipt, AlertTriangle, Loader2, Calendar } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -37,7 +37,7 @@ function formatCurrency(amount: number) {
 }
 
 export default function ExpensesPage() {
-  const { expenses, budgetSummary, addExpense } = useFinance()
+  const { expenses, budgetSummary, addExpense, hasAllocations, allocations } = useFinance()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -114,6 +114,36 @@ export default function ExpensesPage() {
   const sortedDates = Object.keys(groupedExpenses).sort((a, b) => 
     new Date(b).getTime() - new Date(a).getTime()
   )
+
+  // Show empty state if no allocations
+  if (!hasAllocations) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header
+          title="Expense Tracking"
+          description="Monitor and manage your spending"
+        />
+        <div className="flex-1 p-4 lg:p-8">
+          <Card className="border-border/50 border-dashed">
+            <CardContent className="p-12">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-muted flex items-center justify-center mb-4">
+                  <Receipt className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">No budget allocations set</h3>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
+                  Please set up your budget allocations first before tracking expenses.
+                </p>
+                <Button asChild>
+                  <a href="/dashboard/budget">Go to Budget</a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -218,11 +248,14 @@ export default function ExpensesPage() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {BUDGET_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.key} value={cat.key}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
+                      {allocations.map((alloc) => {
+                        const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === alloc.category)
+                        return (
+                          <SelectItem key={alloc.category} value={alloc.category}>
+                            {categoryInfo?.label || alloc.category}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -285,7 +318,7 @@ export default function ExpensesPage() {
                     </div>
                     <div className="space-y-2">
                       {groupedExpenses[date].map((expense) => {
-                        const categoryInfo = BUDGET_CATEGORIES.find(c => c.key === expense.category)
+                        const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === expense.category)
                         return (
                           <div
                             key={expense.id}

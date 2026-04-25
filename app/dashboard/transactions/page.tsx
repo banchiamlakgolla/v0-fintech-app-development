@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useFinance } from '@/context/finance-context'
-import { BUDGET_CATEGORIES } from '@/lib/types'
+import { SUGGESTED_CATEGORIES } from '@/lib/types'
 import { 
   History, 
   Search, 
@@ -36,7 +36,7 @@ function formatCurrency(amount: number) {
 }
 
 export default function TransactionsPage() {
-  const { transactions } = useFinance()
+  const { transactions, allocations } = useFinance()
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -136,11 +136,14 @@ export default function TransactionsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {BUDGET_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.key} value={cat.key}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
+                    {allocations.map((alloc) => {
+                      const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === alloc.category)
+                      return (
+                        <SelectItem key={alloc.category} value={alloc.category}>
+                          {categoryInfo?.label || alloc.category}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -204,7 +207,7 @@ export default function TransactionsPage() {
                     </div>
                     <div className="space-y-2">
                       {groupedTransactions[date].map((transaction) => {
-                        const categoryInfo = BUDGET_CATEGORIES.find(c => c.key === transaction.category)
+                        const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === transaction.category)
                         
                         return (
                           <div
