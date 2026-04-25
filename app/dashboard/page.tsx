@@ -8,6 +8,7 @@ import { BudgetChart } from '@/components/dashboard/budget-chart'
 import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { AlertsPanel } from '@/components/dashboard/alerts-panel'
+import { GoalsProgress } from '@/components/dashboard/goals-progress'
 import { Wallet, TrendingUp, PiggyBank, AlertTriangle } from 'lucide-react'
 
 function formatCurrency(amount: number) {
@@ -94,8 +95,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Bottom Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Goals and Payments Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <GoalsProgress />
           <UpcomingPayments />
           <RecentTransactions />
         </div>

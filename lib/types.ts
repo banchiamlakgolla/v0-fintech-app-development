@@ -150,3 +150,17 @@ export interface BudgetSummary {
   remaining: number
   color: string
 }
+
+// Goal types
+export interface Goal {
+  id: string
+  userId: string
+  name: string
+  targetAmount: number
+  currentAmount: number
+  category: BudgetCategory
+  deadline?: string
+  status: 'active' | 'completed'
+  createdAt: string
+  completedAt?: string
+}

@@ -11,6 +11,7 @@ import type {
   Notification,
   BudgetSummary,
   BudgetCategory,
+  Goal,
 } from '@/lib/types'
 import { SUGGESTED_CATEGORIES, getCategoryInfo, CATEGORY_COLORS } from '@/lib/types'
 import {
@@ -21,6 +22,7 @@ import {
   transactionApi,
   approvalApi,
   notificationApi,
+  goalsApi,
 } from '@/lib/api'
 import { useAuth } from './auth-context'
 
@@ -34,6 +36,7 @@ interface FinanceContextType {
   approvalRequests: ApprovalRequest[]
   notifications: Notification[]
   budgetSummary: BudgetSummary[]
+  goals: Goal[]
   
   // Loading states
   isLoading: boolean
@@ -59,6 +62,11 @@ interface FinanceContextType {
   approveRequest: (requestId: string) => Promise<void>
   rejectRequest: (requestId: string) => Promise<void>
   markNotificationRead: (id: string) => Promise<void>
+  // Goals
+  addGoal: (data: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'currentAmount' | 'status'>) => Promise<void>
+  updateGoal: (id: string, data: Partial<Goal>) => Promise<void>
+  deleteGoal: (id: string) => Promise<void>
+  addFundsToGoal: (id: string, amount: number) => Promise<void>
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined)
@@ -73,6 +81,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([])
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const refreshData = useCallback(async () => {
@@ -88,6 +97,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         transactionsData,
         approvalsData,
         notificationsData,
+        goalsData,
       ] = await Promise.all([
         incomeApi.getCurrentMonth(user.id),
         allocationApi.get(user.id),
@@ -96,6 +106,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         transactionApi.get(user.id),
         approvalApi.get(user.id),
         notificationApi.get(user.id),
+        goalsApi.get(user.id),
       ])
       
       setIncomeState(incomeData)
@@ -105,6 +116,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setTransactions(transactionsData)
       setApprovalRequests(approvalsData)
       setNotifications(notificationsData)
+      setGoals(goalsData)
     } catch (error) {
       console.error('Failed to refresh data:', error)
     } finally {
@@ -263,6 +275,53 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
   }
 
+  // Goal actions
+  const addGoal = async (data: Omit<Goal, 'id' | 'userId' | 'createdAt' | 'currentAmount' | 'status'>) => {
+    if (!user) return
+    await goalsApi.add({ ...data, userId: user.id })
+    await refreshData()
+  }
+
+  const updateGoal = async (id: string, data: Partial<Goal>) => {
+    await goalsApi.update(id, data)
+    await refreshData()
+  }
+
+  const deleteGoal = async (id: string) => {
+    await goalsApi.delete(id)
+    await refreshData()
+  }
+
+  const addFundsToGoal = async (id: string, amount: number) => {
+    if (!user) return
+    const updatedGoal = await goalsApi.addFunds(id, amount)
+    
+    // Check if goal was completed and create notification
+    if (updatedGoal && updatedGoal.status === 'completed') {
+      await notificationApi.add({
+        userId: user.id,
+        title: 'Goal Achieved!',
+        message: `Congratulations! You have achieved your goal: ${updatedGoal.name}`,
+        type: 'info',
+        read: false,
+      })
+    } else if (updatedGoal) {
+      // Check if close to completion (90%)
+      const progress = (updatedGoal.currentAmount / updatedGoal.targetAmount) * 100
+      if (progress >= 90 && progress < 100) {
+        await notificationApi.add({
+          userId: user.id,
+          title: 'Almost There!',
+          message: `You are ${Math.round(progress)}% towards your goal: ${updatedGoal.name}`,
+          type: 'info',
+          read: false,
+        })
+      }
+    }
+    
+    await refreshData()
+  }
+
   return (
     <FinanceContext.Provider value={{
       income,
@@ -273,6 +332,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       approvalRequests,
       notifications,
       budgetSummary,
+      goals,
       isLoading,
       hasData,
       hasIncome,
@@ -292,6 +352,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       approveRequest,
       rejectRequest,
       markNotificationRead,
+      addGoal,
+      updateGoal,
+      deleteGoal,
+      addFundsToGoal,
     }}>
       {children}
     </FinanceContext.Provider>

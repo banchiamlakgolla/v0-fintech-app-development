@@ -9,7 +9,7 @@ import type {
   OTP,
   Notification,
   BudgetCategory,
-  BUDGET_CATEGORIES,
+  Goal,
 } from './types'
 
 // Generate unique IDs
@@ -25,6 +25,7 @@ let transactions: Transaction[] = []
 let approvalRequests: ApprovalRequest[] = []
 let otps: OTP[] = []
 let notifications: Notification[] = []
+let goals: Goal[] = []
 
 // No demo data initialization - users start with zero state
 
@@ -402,5 +403,72 @@ export const notificationApi = {
     }
     notifications.push(notification)
     return notification
+  },
+}
+
+// ============= GOALS API =============
+export const goalsApi = {
+  async get(userId: string): Promise<Goal[]> {
+    await delay(200)
+    return goals.filter(g => g.userId === userId).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+  },
+  
+  async getById(id: string): Promise<Goal | undefined> {
+    await delay(100)
+    return goals.find(g => g.id === id)
+  },
+  
+  async add(data: Omit<Goal, 'id' | 'createdAt' | 'currentAmount' | 'status'>): Promise<Goal> {
+    await delay(300)
+    const goal: Goal = {
+      ...data,
+      id: generateId(),
+      currentAmount: 0,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    }
+    goals.push(goal)
+    return goal
+  },
+  
+  async update(id: string, data: Partial<Goal>): Promise<Goal | undefined> {
+    await delay(200)
+    const index = goals.findIndex(g => g.id === id)
+    if (index !== -1) {
+      goals[index] = { ...goals[index], ...data }
+      return goals[index]
+    }
+    return undefined
+  },
+  
+  async delete(id: string): Promise<boolean> {
+    await delay(200)
+    const initialLength = goals.length
+    goals = goals.filter(g => g.id !== id)
+    return goals.length < initialLength
+  },
+  
+  async addFunds(id: string, amount: number): Promise<Goal | undefined> {
+    await delay(200)
+    const index = goals.findIndex(g => g.id === id)
+    if (index !== -1) {
+      goals[index].currentAmount += amount
+      
+      // Check if goal is completed
+      if (goals[index].currentAmount >= goals[index].targetAmount) {
+        goals[index].status = 'completed'
+        goals[index].completedAt = new Date().toISOString()
+      }
+      
+      return goals[index]
+    }
+    return undefined
+  },
+  
+  async getByCategory(userId: string, category: string): Promise<Goal[]> {
+    await delay(100)
+    return goals.filter(g => g.userId === userId && g.category === category)
   },
 }
