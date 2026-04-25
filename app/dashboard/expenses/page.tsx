@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useFinance } from '@/context/finance-context'
-import { SUGGESTED_CATEGORIES, type BudgetCategory } from '@/lib/types'
+import { SUGGESTED_CATEGORIES, getCategoryInfo, type BudgetCategory } from '@/lib/types'
 import { Plus, Receipt, AlertTriangle, Loader2, Calendar } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -249,10 +249,10 @@ export default function ExpensesPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {allocations.map((alloc) => {
-                        const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === alloc.category)
+                        const info = getCategoryInfo(alloc.category, allocations)
                         return (
                           <SelectItem key={alloc.category} value={alloc.category}>
-                            {categoryInfo?.label || alloc.category}
+                            {info.label}
                           </SelectItem>
                         )
                       })}
@@ -318,7 +318,7 @@ export default function ExpensesPage() {
                     </div>
                     <div className="space-y-2">
                       {groupedExpenses[date].map((expense) => {
-                        const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === expense.category)
+                        const info = getCategoryInfo(expense.category, allocations)
                         return (
                           <div
                             key={expense.id}
@@ -330,8 +330,8 @@ export default function ExpensesPage() {
                               </div>
                               <div>
                                 <p className="font-medium text-foreground">{expense.title}</p>
-                                <p className="text-sm text-muted-foreground capitalize">
-                                  {categoryInfo?.label || expense.category}
+                                <p className="text-sm text-muted-foreground">
+                                  {info.label}
                                 </p>
                               </div>
                             </div>

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { useFinance } from '@/context/finance-context'
-import { SUGGESTED_CATEGORIES, type BudgetCategory } from '@/lib/types'
+import { SUGGESTED_CATEGORIES, CATEGORY_COLORS, type BudgetCategory } from '@/lib/types'
 import { PieChart, Save, Plus, X, Loader2, AlertCircle } from 'lucide-react'
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -42,6 +42,8 @@ export default function BudgetPage() {
   const [localAllocations, setLocalAllocations] = useState<AllocationItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [customCategoryName, setCustomCategoryName] = useState('')
+  const [showCustomInput, setShowCustomInput] = useState(false)
 
   useEffect(() => {
     if (allocations.length > 0) {
@@ -64,17 +66,35 @@ export default function BudgetPage() {
     c => !localAllocations.some(a => a.category === c.key)
   )
 
-  const addCategory = (category: BudgetCategory) => {
+  const addCategory = (category: BudgetCategory, customLabel?: string) => {
+    if (localAllocations.some(a => a.category === category)) return
+    
     const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === category)
-    if (!categoryInfo) return
+    const colorIndex = localAllocations.length % CATEGORY_COLORS.length
     
     setLocalAllocations(prev => [...prev, {
       category,
-      label: categoryInfo.label,
+      label: customLabel || categoryInfo?.label || category,
       percentage: 0,
-      color: categoryInfo.color,
+      color: categoryInfo?.color || CATEGORY_COLORS[colorIndex],
     }])
     setHasChanges(true)
+  }
+
+  const addCustomCategory = () => {
+    const trimmed = customCategoryName.trim()
+    if (!trimmed) return
+    
+    // Create a key from the name (lowercase, no spaces)
+    const key = trimmed.toLowerCase().replace(/\s+/g, '-')
+    
+    if (localAllocations.some(a => a.category === key)) {
+      return // Category already exists
+    }
+    
+    addCategory(key, trimmed)
+    setCustomCategoryName('')
+    setShowCustomInput(false)
   }
 
   const removeCategory = (category: BudgetCategory) => {
@@ -190,24 +210,69 @@ export default function BudgetPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Add Category Buttons */}
-              {availableCategories.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Add Category</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {availableCategories.map(cat => (
-                      <Button
-                        key={cat.key}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addCategory(cat.key)}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        {cat.label}
-                      </Button>
-                    ))}
-                  </div>
+              <div className="space-y-3">
+                <Label>Add Category</Label>
+                <div className="flex flex-wrap gap-2">
+                  {availableCategories.map(cat => (
+                    <Button
+                      key={cat.key}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addCategory(cat.key)}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      {cat.label}
+                    </Button>
+                  ))}
+                  {!showCustomInput && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCustomInput(true)}
+                      className="border-dashed"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Custom
+                    </Button>
+                  )}
                 </div>
-              )}
+                
+                {/* Custom Category Input */}
+                {showCustomInput && (
+                  <div className="flex gap-2 p-3 rounded-xl border border-dashed border-border bg-muted/30">
+                    <Input
+                      placeholder="Enter category name..."
+                      value={customCategoryName}
+                      onChange={(e) => setCustomCategoryName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addCustomCategory()
+                        }
+                      }}
+                      className="flex-1"
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={addCustomCategory}
+                      disabled={!customCategoryName.trim()}
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowCustomInput(false)
+                        setCustomCategoryName('')
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
 
               {/* Allocation Items */}
               {localAllocations.length > 0 ? (

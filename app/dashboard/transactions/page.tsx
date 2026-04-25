@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useFinance } from '@/context/finance-context'
-import { SUGGESTED_CATEGORIES } from '@/lib/types'
+import { SUGGESTED_CATEGORIES, getCategoryInfo } from '@/lib/types'
 import { 
   History, 
   Search, 
@@ -137,10 +137,10 @@ export default function TransactionsPage() {
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
                     {allocations.map((alloc) => {
-                      const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === alloc.category)
+                      const info = getCategoryInfo(alloc.category, allocations)
                       return (
                         <SelectItem key={alloc.category} value={alloc.category}>
-                          {categoryInfo?.label || alloc.category}
+                          {info.label}
                         </SelectItem>
                       )
                     })}
@@ -207,7 +207,7 @@ export default function TransactionsPage() {
                     </div>
                     <div className="space-y-2">
                       {groupedTransactions[date].map((transaction) => {
-                        const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === transaction.category)
+                        const categoryInfo = getCategoryInfo(transaction.category, allocations)
                         
                         return (
                           <div
