@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/context/auth-context'
 import { incomeApi, allocationApi } from '@/lib/api'
-import { SUGGESTED_CATEGORIES, type BudgetCategory } from '@/lib/types'
+import { SUGGESTED_CATEGORIES, CATEGORY_COLORS, type BudgetCategory } from '@/lib/types'
 import { 
   ArrowRight, 
   ArrowLeft, 
@@ -50,6 +50,8 @@ export default function OnboardingPage() {
   const [allocations, setAllocations] = useState<AllocationItem[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [customCategoryName, setCustomCategoryName] = useState('')
+  const [showCustomInput, setShowCustomInput] = useState(false)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -71,16 +73,36 @@ export default function OnboardingPage() {
     ? Math.abs(totalAllocated - 100) < 0.01 
     : Math.abs(totalAllocated - incomeAmount) < 0.01
 
-  const addCategory = (category: BudgetCategory) => {
+  const addCategory = (category: BudgetCategory, customLabel?: string) => {
+    if (allocations.some(a => a.category === category)) return
+    
     const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === category)
-    if (!categoryInfo || allocations.some(a => a.category === category)) return
+    const colorIndex = allocations.length % CATEGORY_COLORS.length
     
     setAllocations(prev => [...prev, {
       category,
-      label: categoryInfo.label,
+      label: customLabel || categoryInfo?.label || category,
       value: 0,
-      color: categoryInfo.color,
+      color: categoryInfo?.color || CATEGORY_COLORS[colorIndex],
     }])
+  }
+
+  const addCustomCategory = () => {
+    const trimmed = customCategoryName.trim()
+    if (!trimmed) return
+    
+    // Create a key from the name (lowercase, no spaces)
+    const key = trimmed.toLowerCase().replace(/\s+/g, '-')
+    
+    if (allocations.some(a => a.category === key)) {
+      setError('This category already exists')
+      return
+    }
+    
+    addCategory(key, trimmed)
+    setCustomCategoryName('')
+    setShowCustomInput(false)
+    setError('')
   }
 
   const removeCategory = (category: BudgetCategory) => {
@@ -310,7 +332,7 @@ export default function OnboardingPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Suggested Categories */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Label>Add Categories</Label>
                   <div className="flex flex-wrap gap-2">
                     {SUGGESTED_CATEGORIES.filter(c => !allocations.some(a => a.category === c.key)).map(cat => (
@@ -324,7 +346,54 @@ export default function OnboardingPage() {
                         {cat.label}
                       </Button>
                     ))}
+                    {!showCustomInput && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowCustomInput(true)}
+                        className="border-dashed"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Custom
+                      </Button>
+                    )}
                   </div>
+                  
+                  {/* Custom Category Input */}
+                  {showCustomInput && (
+                    <div className="flex gap-2 p-3 rounded-xl border border-dashed border-border bg-muted/30">
+                      <Input
+                        placeholder="Enter category name..."
+                        value={customCategoryName}
+                        onChange={(e) => setCustomCategoryName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            addCustomCategory()
+                          }
+                        }}
+                        className="flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        onClick={addCustomCategory}
+                        disabled={!customCategoryName.trim()}
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowCustomInput(false)
+                          setCustomCategoryName('')
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Added Categories */}

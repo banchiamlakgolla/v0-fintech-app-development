@@ -24,21 +24,41 @@ export interface Allocation {
   percentage: number
 }
 
-export type BudgetCategory = 
-  | 'expenses'
-  | 'savings'
-  | 'education'
-  | 'personal'
-  | 'emergency'
+// BudgetCategory is now a string to allow custom categories
+export type BudgetCategory = string
 
-// Suggested categories (user can choose which ones to use)
-export const SUGGESTED_CATEGORIES: { key: BudgetCategory; label: string; color: string }[] = [
+// Suggested categories (user can choose which ones to use or create custom ones)
+export const SUGGESTED_CATEGORIES: { key: string; label: string; color: string }[] = [
   { key: 'expenses', label: 'Expenses', color: 'var(--chart-1)' },
   { key: 'savings', label: 'Savings', color: 'var(--chart-2)' },
   { key: 'education', label: 'Education', color: 'var(--chart-3)' },
   { key: 'personal', label: 'Personal', color: 'var(--chart-4)' },
   { key: 'emergency', label: 'Emergency', color: 'var(--chart-5)' },
 ]
+
+// Color palette for categories (used for custom categories)
+export const CATEGORY_COLORS = [
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+]
+
+// Helper to get category info (works for both suggested and custom categories)
+export function getCategoryInfo(category: string, existingCategories: { category: string; label?: string }[] = []) {
+  const suggested = SUGGESTED_CATEGORIES.find(c => c.key === category)
+  if (suggested) return { label: suggested.label, color: suggested.color }
+  
+  // For custom categories, use the category name as label and assign a color
+  const index = existingCategories.findIndex(c => c.category === category)
+  const colorIndex = index >= 0 ? index % CATEGORY_COLORS.length : Math.abs(category.charCodeAt(0)) % CATEGORY_COLORS.length
+  
+  return {
+    label: category.charAt(0).toUpperCase() + category.slice(1),
+    color: CATEGORY_COLORS[colorIndex],
+  }
+}
 
 // For backward compatibility, keep BUDGET_CATEGORIES but without default percentages
 export const BUDGET_CATEGORIES = SUGGESTED_CATEGORIES.map(cat => ({

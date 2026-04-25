@@ -12,7 +12,7 @@ import type {
   BudgetSummary,
   BudgetCategory,
 } from '@/lib/types'
-import { SUGGESTED_CATEGORIES } from '@/lib/types'
+import { SUGGESTED_CATEGORIES, getCategoryInfo, CATEGORY_COLORS } from '@/lib/types'
 import {
   incomeApi,
   allocationApi,
@@ -118,8 +118,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const hasData = hasIncome && hasAllocations
 
   // Calculate budget summary - only for allocated categories
-  const budgetSummary: BudgetSummary[] = allocations.map(alloc => {
-    const categoryInfo = SUGGESTED_CATEGORIES.find(c => c.key === alloc.category)
+  const budgetSummary: BudgetSummary[] = allocations.map((alloc, index) => {
+    const categoryInfo = getCategoryInfo(alloc.category, allocations)
     const allocated = (income * alloc.percentage) / 100
     const thisMonth = new Date().toISOString().slice(0, 7)
     const spent = expenses
@@ -128,12 +128,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     return {
       category: alloc.category,
-      label: categoryInfo?.label || alloc.category,
+      label: categoryInfo.label,
       percentage: alloc.percentage,
       allocated,
       spent,
       remaining: allocated - spent,
-      color: categoryInfo?.color || 'var(--chart-1)',
+      color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
     }
   })
 
