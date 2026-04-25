@@ -9,8 +9,8 @@ import './globals.css'
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'FinWise - Smart Budget Management',
-  description: 'Manage your income, track expenses, and make secure payments with FinWise',
+  title: 'Eqde - Smart Budget Management',
+  description: 'Manage your income, track expenses, and make secure payments with Eqde',
   generator: 'v0.app',
   icons: {
     icon: [
